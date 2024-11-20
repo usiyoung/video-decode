@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Streaming</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+        }
+        .delay-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 16px;
+            z-index: 100;
+        }
+    </style>
+</head>
+    <body>
+        <canvas id="videoCanvas"></canvas>
+        <div id="delayOverlay" class="delay-overlay">지연 시간: 0 ms</div>
+
+        <script>
+            const WS_URL = "ws://localhost:3001";
+            const FPS = 15;
+            const FRAME_DELAY = 1000 / FPS;
+
+            const canvas = document.getElementById("videoCanvas");
+            const delayOverlay = document.getElementById("delayOverlay");
+            const ctx = canvas.getContext("2d");
+            canvas.width = 640;
+            canvas.height = 360;
+
+            let buffer = [];
+
+            let isLoading = true;
+            let lastFrameTime = performance.now();
+
+            const ws = new WebSocket(WS_URL);
+            ws.onmessage = (event) => handleFrame(event.data);
+            ws.onclose = handleConnectionClose;
+
+            function handleFrame(data) {
+                buffer = [...buffer, data];
+                log(`버퍼 크기: ${buffer.length}`);
+
+                if (isLoading) {
+                    isLoading = false;
+
+                    playFrames();
+                }
+            }
+
+            function handleConnectionClose() {
+                log("WebSocket 연결이 종료되었습니다.");
+                if (buffer.length > 0) {
+                    log("남은 버퍼 처리 중...");
+                    playFrames();
+                }
+            }
+
+            function playFrames() {
+                if (buffer.length > 0) {
+                    const blob = new Blob([buffer.shift()], { type: "image/jpeg" });
+                    const img = new Image();
+                    img.src = URL.createObjectURL(blob);
+
+                    img.onload = () => renderFrame(img);
+                    img.onerror = () => {
+                        log("이미지 로드 실패");
+                        if (buffer.length) {
+                            setTimeout(playFrames, FRAME_DELAY);
+                        }
+                    };
+                } else if (!isLoading) {
+                    log("버퍼가 비었습니다. 데이터를 기다리는 중...");
+                }
+            }
+
+            function renderFrame(img) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                const currentTime = performance.now();
+                const delay = currentTime - lastFrameTime;
+                lastFrameTime = currentTime;
+
+                updateDelayOverlay(`지연 시간: ${delay.toFixed(2)} ms`);
+                URL.revokeObjectURL(img.src);
+
+                setTimeout(playFrames, FRAME_DELAY);
+            }
+
+            function updateDelayOverlay(text) {
+                delayOverlay.innerText = text;
+            }
+
+            function log(message) {
+                console.log(message);
+            }
+        </script>
+    </body>
+</html>
