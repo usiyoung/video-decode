@@ -1,6 +1,6 @@
-<<<<<<< HEAD
+
 # video-decode
-=======
+
 # Video Streaming Application
 
 이 프로젝트는 **FFmpeg**를 사용하여 실시간으로 MJPEG 형식의 이미지를 스트리밍하는 간단한 비디오 스트리밍 애플리케이션입니다.  
@@ -44,4 +44,4 @@
 - FFmpeg 설치가 필요합니다.
 - 스트리밍 URL이 동작하지 않을 경우, 대체 URL로(VIDEO_PATH) 설정하세요.
 - 포트 충돌 시 server.js에서 포트를 변경하세요.
->>>>>>> bd341f4 (init)
+ 
